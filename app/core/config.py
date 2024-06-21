@@ -8,6 +8,12 @@ class DatabaseConfig(BaseModel):
     echo_pool: bool = False
 
 
+class MinioConfig(BaseModel):
+    endpoint: str
+    access_key: str
+    secret_key: str
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file='.env',
@@ -19,6 +25,7 @@ class Settings(BaseSettings):
 
     app_title: str = 'Тестовое LITE-Gallery'
     db: DatabaseConfig
+    minio: MinioConfig
 
 
 settings = Settings()
