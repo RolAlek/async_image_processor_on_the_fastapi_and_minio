@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.core import db
 from app.core.config import settings
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup
