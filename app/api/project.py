@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core import db
-from crud.project import get_project_images
-from models import Image
-from schemas.image import ProjectImages, ProjectResponse, ImageVersions
+from app.core import db
+from app.crud.project import get_project_images
+from app.schemas.image import ProjectImages, ProjectResponse, ImageVersions
 
 
 router = APIRouter(prefix='/projects', tags=['Project'])

@@ -2,9 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from api import image_router, project_router
-from core import db
-from core.config import settings
+from app.api import image_router, project_router
+from app.core import db
+from app.core.config import settings
 
 
 @asynccontextmanager

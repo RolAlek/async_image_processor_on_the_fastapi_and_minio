@@ -3,11 +3,13 @@ version: '3'
 volumes:
   pgdata:
   miniodata:
+  rabbitmq_data:
 
 services:
   db:
     image: postgres:latest
     env_file: .env
+    restart: always
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -16,11 +18,21 @@ services:
   minio:
     image: minio/minio:latest
     command: server --console-address ":9001" /data/
+    restart: always
     env_file: .env
     volumes:
       - miniodata:/data
     ports:
       - "9000:9000"
       - "9001:9001"
-    
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    restart: always
+    env_file: .env
+    volumes:
+     - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"

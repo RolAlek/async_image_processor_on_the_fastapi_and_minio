@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import Image, Project
-from schemas.image import ImageRequest
+from app.models import Image, Project
+from app.schemas.image import ImageRequest
 
 
 async def check_and_create_project(
@@ -25,5 +25,3 @@ async def create_image(request: ImageRequest, session: AsyncSession):
     await session.commit()
     await session.refresh(image)
     return image
-
-

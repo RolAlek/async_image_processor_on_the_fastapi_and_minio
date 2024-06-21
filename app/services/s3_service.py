@@ -1,7 +1,7 @@
 from boto3 import session, client
 from botocore.exceptions import ClientError
 
-from core.config import settings
+from app.core.config import settings
 
 
 def create_s3_client():
