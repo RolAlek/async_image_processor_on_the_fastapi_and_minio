@@ -14,9 +14,10 @@ class Settings(BaseSettings):
         case_sensitive=False,
         env_nested_delimiter='__',
         env_prefix='APP_CONF__',
+        extra='allow',
     )
 
-    app_title = 'Тестовое LITE-Gallery'
+    app_title: str = 'Тестовое LITE-Gallery'
     db: DatabaseConfig
 
 
