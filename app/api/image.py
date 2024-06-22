@@ -1,11 +1,12 @@
+from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, Form, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import db
 from app.crud.image import create_image
+from app.services.utils import wait_create_url_task
 from app.schemas.image import ImageRequest, ImageResponse
-from app.services.s3_service import create_presigned_upload_url
-from worker.tasks import upload_image_via_presigned_url
+from worker.tasks import upload_image_via_presigned_url, generate_presigned_url
 
 
 router = APIRouter(prefix='/images', tags=['Image'])
@@ -18,6 +19,7 @@ async def create_image_view(
     image: UploadFile = File(...),
     session: AsyncSession = Depends(db.get_session),
 ):
+    # Создаем экземпляр Image в БД:
     image_db = await create_image(
         ImageRequest(
             filename=filename,
@@ -25,14 +27,18 @@ async def create_image_view(
         ),
         session,
     )
-    s3_response = create_presigned_upload_url(
+    # Запускаем задачу в celery по генерации presigned_url:
+    task = generate_presigned_url.delay(
         project_id=image_db.project_id,
         filename=image_db.filename,
     )
-    file_content = await image.read()
-    upload_image_via_presigned_url.delay(s3_response, file_content)
-    if s3_response:
+    # Асинхронная проверка задачи и получения результата, в цикле событий
+    # ждем ссылку:
+    task_result = await wait_create_url_task(AsyncResult(task.id))
+
+    if task_result:
+        upload_image_via_presigned_url.delay(task_result, await image.read())
         return ImageResponse(
-            upload_link=s3_response.get('url'),
-            params=s3_response.get('fields')
+            upload_link=task_result.get('url'),
+            params=task_result.get('fields')
         )
