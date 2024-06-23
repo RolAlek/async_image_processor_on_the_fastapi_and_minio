@@ -14,19 +14,11 @@ router = APIRouter(prefix='/images', tags=['Image'])
 
 @router.post('/', response_model=ImageResponse)
 async def create_image_view(
-    filename: str = Form(...),
-    project_id: int = Form(...),
-    image: UploadFile = File(...),
+    request: ImageRequest,
     session: AsyncSession = Depends(db.get_session),
 ):
     # Создаем экземпляр Image в БД:
-    image_db = await create_image(
-        ImageRequest(
-            filename=filename,
-            project_id=project_id
-        ),
-        session,
-    )
+    image_db = await create_image(request, session)
     # Запускаем задачу в celery по генерации presigned_url:
     task = generate_presigned_url.delay(
         project_id=image_db.project_id,
@@ -37,7 +29,8 @@ async def create_image_view(
     task_result = await wait_create_url_task(AsyncResult(task.id))
 
     if task_result:
-        upload_image_via_presigned_url.delay(task_result, await image.read())
+        # TODO: зачем пихать это в таску когда можно написать асинхронную функцию?!
+        # upload_image_via_presigned_url.delay(task_result, await image.read())
         return ImageResponse(
             upload_link=task_result.get('url'),
             params=task_result.get('fields')

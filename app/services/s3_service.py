@@ -46,3 +46,32 @@ def create_presigned_upload_url(
     except ClientError:
         return None
     return response
+
+
+def check_exists_object(bucket: str, key: str):
+    s3_client = create_s3_client()
+    try:
+        s3_client.head_object(
+            Bucket=bucket,
+            Key=key,
+        )
+    except ClientError:
+        return False
+    return True
+
+
+def create_presigned_download_url(
+    bucket_name: str,
+    object_name: str,
+    expiration: int =3600
+):
+    s3_client = create_s3_client()
+    try:
+        response = s3_client.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={'Bucket': bucket_name, 'Key': object_name},
+            ExpiresIn=3600,
+        )
+    except ClientError:
+        return None
+    return response

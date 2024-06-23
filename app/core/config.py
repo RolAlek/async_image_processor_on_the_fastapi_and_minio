@@ -2,6 +2,10 @@ from pydantic import BaseModel, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class CeleryConfig(BaseModel):
+    broker: str
+    backend: str
+
 class DatabaseConfig(BaseModel):
     url: PostgresDsn
     echo: bool = False
@@ -25,8 +29,10 @@ class Settings(BaseSettings):
     )
 
     app_title: str = 'Тестовое LITE-Gallery'
+    secret_key: str
     db: DatabaseConfig
     minio: MinioConfig
+    celery: CeleryConfig
 
 
 settings = Settings()
