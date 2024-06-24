@@ -1,13 +1,15 @@
+from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, Form, File, Request, UploadFile, WebSocket
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.utils import wait_create_url_task
 from app.core import db
 from app.api.image import create_image_view
 from app.api.project import get_images_for_project
 from app.schemas.image import ImageRequest, ImageResponse
-from worker.tasks import upload_image_via_presigned_url
+from worker.tasks import upload_image_via_presigned_url, image_processor
 
 
 
@@ -52,8 +54,8 @@ async def image_upload_view(request: Request):
 
 @router.post('/image_upload')
 async def image_upload(request: Request, image: UploadFile = File(...)):
-    presigned_url = request.session.get('result')
-    upload_image_via_presigned_url.delay(presigned_url, await image.read())
+    task = image_processor.delay(await image.read())
+    request.session['task_id'] = task.id
     return RedirectResponse(f'projects/{request.session.get("project_id")}')
 
 
@@ -64,6 +66,13 @@ async def view_project(
     id: int,
     session: AsyncSession = Depends(db.get_session)
 ):
+    processing_result = await wait_create_url_task(
+        AsyncResult(id=request.session.get('task_id')),
+    )
+    upload_image_via_presigned_url.delay(
+        request.session.get('result'),
+        processing_result,
+    )
     images = await get_images_for_project(id, session)
     return templates.TemplateResponse(
         'project.html',

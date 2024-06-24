@@ -29,7 +29,6 @@ async def create_image_view(
     task_result = await wait_create_url_task(AsyncResult(task.id))
 
     if task_result:
-        # TODO: зачем пихать это в таску когда можно написать асинхронную функцию?!
         # upload_image_via_presigned_url.delay(task_result, await image.read())
         return ImageResponse(
             upload_link=task_result.get('url'),
