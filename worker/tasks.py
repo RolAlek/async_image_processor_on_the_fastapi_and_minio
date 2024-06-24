@@ -15,12 +15,12 @@ from worker.celery import app
 
 @app.task
 def upload_image_via_presigned_url(presigned_post_result, file_content):
-    url = presigned_post_result['url']
-    fields = presigned_post_result['fields']
+    url = presigned_post_result['upload_link']
+    fields = presigned_post_result['params']
     response = requests.post(
         url=url,
         data=fields,
-        files={'file': file_content}
+        files={'file': file_content},
     )
     if response.status_code == 204:
         bucket = url.split('/')[-1]
@@ -38,10 +38,3 @@ def generate_presigned_url(project_id: int, filename: str):
         filename=filename,
     )
     return response
-
-
-@app.task
-def set_link_and_state_for_image(url: str, file_name: str):
-    pass
-    
-     

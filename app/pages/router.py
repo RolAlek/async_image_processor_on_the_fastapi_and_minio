@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, File, Request, UploadFile, WebSocket
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import db
 from app.api.image import create_image_view
+from app.api.project import get_images_for_project
 from app.schemas.image import ImageRequest, ImageResponse
+from worker.tasks import upload_image_via_presigned_url
 
 
 
@@ -34,21 +36,36 @@ async def image_create(
         ),
         session=session,
     )
-    result = result.model_dump()
-    request.session['upload_url'] = {
-        'url': result['upload_link'],
-        'fields': result['params'],
-    }
-    return RedirectResponse(url='image_upload')
+    request.session['result'] = result.model_dump()
+    request.session['project_id'] = project_id
+    return RedirectResponse('image_upload_view')
 
 
-@router.post('/image_upload', response_class=HTMLResponse)
-async def image_upload(request: Request):
-    upload_url = request.session.get('upload_url')
+@router.post('/image_upload_view', response_class=HTMLResponse)
+async def image_upload_view(request: Request):
+    result = request.session.get('result')
     return templates.TemplateResponse(
         'upload.html',
-        {
-            'request': request,
-            'fields': upload_url['fields'],
-        }
+        {'request': request, 'params': result.get('params')}
+    )
+
+
+@router.post('/image_upload')
+async def image_upload(request: Request, image: UploadFile = File(...)):
+    presigned_url = request.session.get('result')
+    upload_image_via_presigned_url.delay(presigned_url, await image.read())
+    return RedirectResponse(f'projects/{request.session.get("project_id")}')
+
+
+
+@router.post('/projects/{id}', response_class=HTMLResponse)
+async def view_project(
+    request: Request,
+    id: int,
+    session: AsyncSession = Depends(db.get_session)
+):
+    images = await get_images_for_project(id, session)
+    return templates.TemplateResponse(
+        'project.html',
+        {'request': request, 'images': images.model_dump()['images']}
     )
