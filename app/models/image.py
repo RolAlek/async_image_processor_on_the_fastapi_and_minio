@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class StateEnum(str, PyEnum):
     INIT = 'init'
     UPLOADED = 'uploaded'
-    PROCESSING = 'processing'
+    PROCESSING = 'processed'
     DONE = 'done'
     ERROR = 'error'
 

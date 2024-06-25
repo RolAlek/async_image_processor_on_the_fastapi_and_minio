@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import db
-from app.crud.image import create_image
+from app.crud.image import create_image, update_image
 from app.services.utils import wait_task
-from app.schemas.image import ImageRequest, ImageResponse
+from app.schemas.image import ImageRequest, ImageResponse, ImageVersions
 from worker.tasks import image_processor, upload_images
 
 
@@ -19,12 +19,25 @@ async def create_image_view(
 ):
     # Создаем экземпляр Image в БД:
     image_db = await create_image(request, session)
-    # Запускаем задачу в celery по генерации presigned_url:
-    processing = image_processor.delay(await request.image.read(), image_db.filename)
-    # Асинхронная проверка задачи и получения результата, в цикле событий
-    # ждем ссылку:
+    # Запускаем обработку в celery:
+    processing = image_processor.delay(
+        await request.image.read(),
+        image_db.filename,
+    )
+    # Асинхронно ждем результат обработки и меняем статус на processed:
     processing_result = await wait_task(AsyncResult(processing.id))
-
+    image_db = await update_image(
+        image=image_db,
+        session=session,
+        state='processed',
+    )
+    # По аналогии с обработкой
     uploading = upload_images.delay(request.project_id, processing_result)
     upload_result = await wait_task(AsyncResult(uploading.id))
+    image = await update_image(
+        image_db,
+        session,
+        ImageVersions(**upload_result),
+        'uploaded'
+    )
     return upload_result
