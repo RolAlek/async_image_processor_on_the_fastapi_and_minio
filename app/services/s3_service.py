@@ -3,7 +3,6 @@ from botocore.exceptions import ClientError
 
 from app.core.config import settings
 
-
 def create_s3_client():
     s3_client = client(
         's3',
@@ -28,7 +27,7 @@ def check_exist_bucket(project_id: int, s3_client):
 
 def create_presigned_upload_url(
     project_id: int,
-    filename: str,
+    file_name: str,
     fields: dict | None = None,
     conditions: list | None = None,
     expiration: int = 3600,
@@ -38,7 +37,7 @@ def create_presigned_upload_url(
         bucket_name = check_exist_bucket(project_id, s3_client)
         response = s3_client.generate_presigned_post(
             bucket_name,
-            filename,
+            file_name,
             Fields=fields,
             Conditions=conditions,
             ExpiresIn=expiration,
@@ -70,7 +69,7 @@ def create_presigned_download_url(
         response = s3_client.generate_presigned_url(
             ClientMethod='get_object',
             Params={'Bucket': bucket_name, 'Key': object_name},
-            ExpiresIn=3600,
+            ExpiresIn=expiration,
         )
     except ClientError:
         return None

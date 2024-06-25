@@ -17,10 +17,11 @@ async def check_and_create_project(
         return new_project
     return project
 
+
 async def create_image(request: ImageRequest, session: AsyncSession):
     data = request.model_dump()
     await check_and_create_project(data['project_id'], session)
-    image = Image(**data)
+    image = Image(filename=data['filename'], project_id=data['project_id'])
     session.add(image)
     await session.commit()
     await session.refresh(image)

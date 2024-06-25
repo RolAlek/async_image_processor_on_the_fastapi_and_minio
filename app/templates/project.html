@@ -3,16 +3,13 @@
 <main>
   <section class="container my-5">
     <div class="row">
-      {% for image in images %}
-        {% for key, value in image.items() %}
+        {% for key, value in images.items() %}
         <div class="col-12 col-lg-7 my-5">
           <p>
             {{ key }} {{ value }}
           </p>
         </div>
         {% endfor %}
-      {% endfor %}
-
     </div>
   </section>
 </main>

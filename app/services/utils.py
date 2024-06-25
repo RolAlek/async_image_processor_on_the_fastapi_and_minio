@@ -4,8 +4,8 @@ from http import HTTPStatus
 from celery.result import AsyncResult, states
 from fastapi import HTTPException
 
-
-async def wait_create_url_task(task: AsyncResult, timeout=10, duration=0.5):
+# TODO: реализация сообщения для websocketa!
+async def wait_task(task: AsyncResult, timeout=10, duration=0.5):
     for _ in range(int(timeout / duration)):
         if task.state in (states.SUCCESS, states.FAILURE):
             break

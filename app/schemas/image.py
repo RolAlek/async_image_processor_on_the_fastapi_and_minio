@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field
+from fastapi import File, UploadFile
 
 
 class ImageRequest(BaseModel):
     filename: str
     project_id: int
+    image: UploadFile = File(...)
 
 
 class ImageResponse(BaseModel):
