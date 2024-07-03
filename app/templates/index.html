@@ -6,18 +6,46 @@
       <div class="row">
         <h1>Загрузить изображение</h1>
         <div class="col-12 col-lg-7 my-5">
-          <form method="post" action="image_create" enctype="multipart/form-data">
+          <form id="upload-form" enctype="multipart/form-data" method="post">
             <label class="fs-4" for="filename">Имя изображения:</label>
             <input class="form-control py-3 mb-3" type="text" name="filename" id="filename" required>
             <br>
             <label class="fs-4" for="project_id">ID проекта:</label>
             <input class="form-control py-3 mb-3"  type="number" name="project_id" id="project_id" required>
             <br>
-            <label for="file" class="form-label fs-4">Выберите файл:</label>
-          <input class="form-control" type="file" name="image" /><br />
+            <label for="file" class="form-label fs-4">Добавьте файл:</label>
+            <input class="form-control" type="file" name="image" id="image" required>
             <br>
-            <input class="btn btn-outline-primary" type="submit" value="Получить ссылку" />
+            <input class="btn btn-outline-primary" type="button" value="Загрузить" onclick="sendFile()">
           </form>
+          <div id="messages"></div>
+          <script>
+            let socket = new WebSocket('ws://localhost:8000/pages/ws/${project_id}');
+
+            socket.onmessage = function(event) {
+              let messages = document.getElementById('messages');
+              messages.innerHTML  += "<p>" + event.data + "</p>";
+            };
+
+            function sendFile() {
+              let form = document.getElementById("upload-form");
+              let formData = new FormData(form);
+
+              let image = formData.get("image");
+              let fileName = formData.get("filename");
+              let projectId = formData.get("project_id");
+
+              let reader = new FileReader();
+              reader.onload = function() {
+                socket.send(JSON.stringify({
+                  filename: fileName,
+                  project_id: parseInt(projectId),
+                  image: reader.result
+                }));
+              };
+              reader.readAsDataURL(image);
+            }
+          </script>
         </div>
       </div>
     </section>

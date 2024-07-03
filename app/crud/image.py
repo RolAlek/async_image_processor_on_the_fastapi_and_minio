@@ -1,7 +1,6 @@
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from app.models import Image, Project, StateEnum
 from app.schemas.image import ImageRequest, ImageVersions
 
@@ -33,18 +32,10 @@ async def create_image(request: ImageRequest, session: AsyncSession):
 async def update_image(
     image: Image,
     session: AsyncSession,
-    data: ImageVersions | None = None,
-    state: str | None = None,
+    data: dict,
 ):
-    image_data = jsonable_encoder(image)
-    if data is not None:
-        update_data = data.model_dump()
-        for field in image_data:
-            if field in update_data:
-                setattr(image, field, update_data[field])
-    if state is not None:
-        setattr(image, 'state', StateEnum(state).name)
-
+    for field, value in data.items():
+        setattr(image, field, value)
     session.add(image)
     await session.commit()
     await session.refresh(image)

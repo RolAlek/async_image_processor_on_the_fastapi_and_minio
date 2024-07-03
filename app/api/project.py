@@ -3,8 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import db
 from app.crud.project import get_project_images
-from app.schemas.image import ProjectImages, ProjectResponse, ImageVersions
-
+from app.schemas.image import ImageVersions, ProjectResponse, ImagesResponse
 
 router = APIRouter(prefix='/projects', tags=['Project'])
 
@@ -17,7 +16,7 @@ async def get_images_for_project(
     project = await get_project_images(id, session)
 
     images_response = [
-        ProjectImages(
+        ImagesResponse(
             image_id=image.id,
             state=image.state,
             filename=image.filename,

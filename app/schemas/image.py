@@ -1,16 +1,11 @@
-from pydantic import BaseModel, Field
 from fastapi import File, UploadFile
+from pydantic import BaseModel, Field
 
 
 class ImageRequest(BaseModel):
     filename: str
     project_id: int
     image: UploadFile = File(...)
-
-
-class ImageResponse(BaseModel):
-    upload_link: str
-    params: dict
 
 
 class ImageVersions(BaseModel):
@@ -21,13 +16,16 @@ class ImageVersions(BaseModel):
     d2500: str | None
 
 
-class ProjectImages(BaseModel):
+class ImagesResponse(BaseModel):
     id: int = Field(..., alias='image_id')
     state: str
     filename: str
     project_id: int
     versions: ImageVersions
 
+    class Config:
+        orm_mode = True
+
 
 class ProjectResponse(BaseModel):
-    images: list[ProjectImages]
+    images: list[ImagesResponse]

@@ -1,3 +1,3 @@
 from .base import Base
-from .project import Project
 from .image import Image, StateEnum
+from .project import Project
