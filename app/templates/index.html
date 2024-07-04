@@ -13,38 +13,62 @@
             <label class="fs-4" for="project_id">ID проекта:</label>
             <input class="form-control py-3 mb-3"  type="number" name="project_id" id="project_id" required>
             <br>
-            <label for="file" class="form-label fs-4">Добавьте файл:</label>
+            <label for="image" class="form-label fs-4">Добавьте файл:</label>
             <input class="form-control" type="file" name="image" id="image" required>
             <br>
             <input class="btn btn-outline-primary" type="button" value="Загрузить" onclick="sendFile()">
           </form>
           <div id="messages"></div>
           <script>
-            let socket = new WebSocket('ws://localhost:8000/pages/ws/${project_id}');
+            let socket;
 
-            socket.onmessage = function(event) {
-              let messages = document.getElementById('messages');
-              messages.innerHTML  += "<p>" + event.data + "</p>";
-            };
+            function initWebSocket(projectId)  {
+              if (socket && socket.readyState  !== websocket.CLOSED) {
+                return;
+              }
+              socket  = new WebSocket(`ws://localhost:8000/pages/ws/${projectId}`);
+              socket.onmessage  = function(event)  {
+                let messages = document.getElementById('messages');
+                messages.innerHTML  += `<p>${event.data}</p>`;
+              };
+              socket.onerror   = function(error)   {
+                console.error("Websocket error", error);
+              };
+              socket.onclose    = function(event)    {
+                console.log("Websocket closed", event);
+              };
+            }
 
-            function sendFile() {
+            function encodeImageToBase64(image)  {
+              return new Promise((resolve, reject) => {
+                const reader  = new FileReader();
+                reader.readAsDataURL(image);
+                reader.onload   = () => {
+                  let base64Data = reader.result.split(',')[1];
+                  resolve(base64Data);
+                };
+              });
+            }
+
+            async function sendFile() {
               let form = document.getElementById("upload-form");
               let formData = new FormData(form);
-
               let image = formData.get("image");
               let fileName = formData.get("filename");
-              let projectId = formData.get("project_id");
+              let projectId = parseInt(formData.get("project_id"));
 
-              let reader = new FileReader();
-              reader.onload = function() {
-                socket.send(JSON.stringify({
-                  filename: fileName,
-                  project_id: parseInt(projectId),
-                  image: reader.result
-                }));
+              let base64Image = await encodeImageToBase64(image);
+
+              initWebSocket(projectId);
+
+              socket.onopen  = function()  {
+                  socket.send(JSON.stringify({
+                    filename: fileName,
+                    project_id: parseInt(projectId),
+                    image: base64Image,
+                  }));
+                };
               };
-              reader.readAsDataURL(image);
-            }
           </script>
         </div>
       </div>

@@ -1,11 +1,9 @@
 import base64
-import json
+from io import BytesIO
 
 from fastapi import (
     APIRouter,
     Depends,
-    File,
-    Form,
     Request,
     UploadFile,
     WebSocket,
@@ -39,15 +37,16 @@ async def websocket_endpoint(
     try:
         while True:
             data = await websocket.receive_json()
+            decoded_image = base64.b64decode(data["image"])
 
             result = await create_image_view(
-                image=ImageRequest(
+                ImageRequest(
                     filename=data["filename"],
                     project_id=data["project_id"],
-                    image=data["file"],
+                    image=UploadFile(file=BytesIO(decoded_image)),
                 ),
-                websocket=websocket,
-                session=session,
+                websocket,
+                session,
             )
 
     except WebSocketDisconnect:

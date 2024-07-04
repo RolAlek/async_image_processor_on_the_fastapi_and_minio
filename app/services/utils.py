@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.image import update_image
 from app.models import StateEnum, Image
 from worker.tasks import image_processor, image_uploader, image_downloader
+from app.core.websocket import manager
 
 
 VERSIONS = [
@@ -32,6 +33,7 @@ async def task_manager(
     processed_image = await send_for_processing(
         image,
         image_name,
+        project_id,
         websocket,
     )
     image_db = await update_image(
@@ -41,25 +43,25 @@ async def task_manager(
     )
 
     for item in processed_image:
-        bucket, key= await send_for_upload(project_id, item, websocket)
+        bucket, key = await send_for_upload(project_id, item, websocket)
         image_db = await update_image(
             image_db,
             session,
             {'state': StateEnum.UPLOADED.value},
         )
-        name, url = await get_download_url(bucket, key, websocket)
+        name, url = await get_download_url(bucket, key, project_id, websocket)
         version = re.search(PATTERN, name)
         image_db = await update_image(
             image_db,
             session,
-            {'state': StateEnum.DONE.value, version: url},
+            {'state': StateEnum.DONE, 'version': url},
         )
-        return image_db
+    return image_db
 
 
-async def get_download_url(bucket: str, key: str, websocket: WebSocket):
+async def get_download_url(bucket: str, key: str, project_id: int, websocket: WebSocket):
     task = image_downloader.delay(bucket, key)
-    return await task_waiter(AsyncResult(task.id), websocket)
+    return await task_waiter(AsyncResult(task.id), project_id, websocket)
 
 
 async def send_for_upload(
@@ -68,25 +70,28 @@ async def send_for_upload(
     websocket: WebSocket
 ):
     task = image_uploader.delay(project_id, *image)
-    result = await task_waiter(AsyncResult(task.id), websocket)
+    result = await task_waiter(AsyncResult(task.id), project_id, websocket)
     return result
 
 
 async def send_for_processing(
     image: UploadFile,
     image_name: str,
+    project_id: int,
     websocket: WebSocket,
 ) -> list[tuple[str, bytes]]:
     results = []
+    original_image = await image.read()
     for version in VERSIONS:
         task = image_processor.delay(
-            await image.read(),
+            original_image,
             image_name,
             version,
         )
         processed_image = await task_waiter(
             AsyncResult(task.id),
-            websocket
+            project_id,
+            websocket,
         )
         results.append(processed_image)
     return results
@@ -94,6 +99,7 @@ async def send_for_processing(
 
 async def task_waiter(
     task: AsyncResult,
+    project_id: int,
     websocket: WebSocket,
     duration: float = 0.5,
 ):
@@ -108,9 +114,9 @@ async def task_waiter(
         )
     match task.name:
         case 'processing':
-            await websocket.send_text(f'Завершена обработка для {task.result[0]}')
+            await manager.send_message_to_project(project_id, f'Завершена обработка для {task.result[0]}')
         case 'uploading':
-            await websocket.send_text(f'Файл {task.result[1]} загружен в Minio!')
+            await manager.send_message_to_project(project_id, f'Файл {task.result[1]} загружен в Minio!')
         case 'downloading':
             await websocket.send_json({'image_name': task.result[0], 'url': task.result[-1]})
     return task.result
